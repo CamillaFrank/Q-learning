@@ -24,9 +24,18 @@ screen.blit(stage,(0,0))
 pg.display.flip()
 cats = []
 player = ()
+snack = False
+trapped = False
 
 epsilon = 1.0
 epsilondecay = 0.005
+discount = 0.9
+lrate = 0.2
+
+steps = 0
+old_player = (0,0)
+
+t = 0.1
 
 
 
@@ -47,12 +56,12 @@ for c in range (stage_w):
 
 ########### Functions #############
 
-def reward(player,player_old,target,is_trapped,snack):
-    old_dist = np.aboslute(old_pos - target)
-    new_dist = np.aboslute(new_pos - target)
+def reward(new_pos,old_pos,target,is_trapped,snack):
+    old_dist = ((target[0] - old_pos[0])**2 + (target[1] - old_pos[1])**2)**0.5
+    new_dist = ((target[0] - new_pos[0])**2 + (target[1] - new_pos[1])**2)**0.5
 
     if is_trapped:
-        Reward = -100
+        Reward = -1000000000000000
     elif snack:
         Reward = 100
     elif new_dist < old_dist:
@@ -86,24 +95,25 @@ def action(qtable):
                 player = (player[0] + 1,player[1])
                 deciding = False
     else:
-        while deciding:
-            choice = np.argmax(qtable[player[0], player[1]])
-            if actionlist[choice] == 'Up' and player[1] != 0:
-                player = (player[0],player[1] - 1)
-                deciding = False
+        
+        choice = np.argmax(qtable[player[0], player[1]])
+        if actionlist[choice] == 'Up' and player[1] != 0:
+            player = (player[0],player[1] - 1)
+            
 
-            elif actionlist[choice] == 'Down' and player[1] != stage_h - 1:
-                player = (player[0],player[1] + 1)
-                deciding = False
+        elif actionlist[choice] == 'Down' and player[1] != stage_h - 1:
+            player = (player[0],player[1] + 1)
+                
 
-            elif actionlist[choice] == 'Left' and player[0] != 0:
-                player = (player[0] - 1,player[1])
-                deciding = False
+        elif actionlist[choice] == 'Left' and player[0] != 0:
+            player = (player[0] - 1,player[1])
+                
 
-            elif actionlist[choice] == 'Right' and player[0] != stage_w - 1:
-                player = (player[0] + 1,player[1])
-                deciding = False
+        elif actionlist[choice] == 'Right' and player[0] != stage_w - 1:
+            player = (player[0] + 1,player[1])
+                
     epsilon = epsilon - epsilondecay
+    return choice
 
 
 
@@ -117,6 +127,10 @@ while running:
         elif event.type == pg.KEYDOWN:
             if event.key == pg.K_ESCAPE:
                 running = False
+            elif event.key == pg.K_PLUS:
+                t = t * 0.1
+            elif event.key == pg.K_MINUS:
+                t = t * 10
 
 
 
@@ -133,14 +147,25 @@ while running:
 
     if player in cats:
         trapped = True
-        #player = player_start
     if player == cheese:
         snack = True
 
-    action(qtab)
+    old_player = player
+    choice = action(qtab)
 
-    #Calc reward
+    R = reward(player,old_player,cheese,trapped,snack)
+
+    qtab[int(old_player[0]), int(old_player[1]), choice] =  qtab[int(old_player[0]), int(old_player[1]), choice] + lrate*(R + (discount**steps)*(np.max(qtab[int(old_player[0]), int(old_player[1])] -  qtab[int(old_player[0]), int(old_player[1]), choice])))
+
+    if trapped or snack:
+        player = player_start
+        snack = False
+        trapped = False
+        steps = 0
 
     pg.display.flip()
+    steps =+ 1
+    print(qtab)
+    print('______________________________________________________')
 
-    time.sleep(0.5)
+    time.sleep(t)
