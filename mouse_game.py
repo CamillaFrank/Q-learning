@@ -1,7 +1,7 @@
 import pygame as pg
+import numpy as np
 import time
 pg.init()
-
 
 stage = pg.image.load("stage.png")
 
@@ -17,19 +17,38 @@ stage = pg.transform.scale(stage,(stage_w*L,stage_h*L))
 mouse_img = pg.transform.scale(mouse_img,(L,L))
 cheese_img = pg.transform.scale(cheese_img,(L,L))
 cat_img = pg.transform.scale(cat_img,(L,L))
-    
- 
-    
+
 screen = pg.display.set_mode((stage_w * L,stage_h * L))
 screen.blit(stage,(0,0))
 
 pg.display.flip()
-
-
-
-
 cats = []
 player = ()
+
+qtab = np.zeros((stage_w,stage_h,4))
+actionlist = ['Left','Right','Up','Down']
+
+########### Functions #############
+
+def reward(player,player_old,target,is_trapped,snack):
+    old_dist = np.aboslute(old_pos - target)
+    new_dist = np.aboslute(new_pos - target)
+
+    if is_trapped:
+        Reward = -100
+    elif snack:
+        Reward = 100
+    elif new_dist < old_dist:
+        Reward = 1
+    else:
+        Reward = -1
+    
+    return Reward
+    
+
+
+
+
 
 for c in range (stage_w):
     for r in range (stage_h):
@@ -42,8 +61,6 @@ for c in range (stage_w):
             player = (c,r)
             player_start = (c,r)
             
-
-
 
 running = True
 while running:
@@ -80,9 +97,12 @@ while running:
     screen.blit(mouse_img,(player[0]*L,player[1]*L))
 
     if player in cats:
-        player = player_start
+        trapped = True
+        #player = player_start
     if player == cheese:
-        player = player_start
+        snack = True
+
+    #Calc reward
 
     pg.display.flip()
 
