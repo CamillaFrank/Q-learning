@@ -4,14 +4,14 @@ import random
 import time
 pg.init()
 
-stage = pg.image.load("stage_3.png")
+stage = pg.image.load("stage_4.png")
 
 mouse_img = pg.image.load("mouse.png")
 cheese_img = pg.image.load("cheese.png")
 cat_img = pg.image.load("cat.png")
 
 stage_w,stage_h = stage.get_size()
-L = 70
+L = 40
 stage = pg.transform.scale(stage,(stage_w*L,stage_h*L))
 
 mouse_img = pg.transform.scale(mouse_img,(L,L))
@@ -28,7 +28,7 @@ snack = False
 trapped = False
 
 epsilon = 1.0
-epsilondecay = 0.005
+epsilondecay = 0.0005
 discount = 0.9
 lrate = 0.2
 
@@ -62,7 +62,7 @@ def reward(new_pos,old_pos,target,is_trapped,snack):
     new_dist = ((target[0] - new_pos[0])**2 + (target[1] - new_pos[1])**2)**0.5
 
     if is_trapped:
-        Reward = -100
+        Reward = (-100)
     elif snack:
         Reward = 100
     elif new_dist < old_dist:
@@ -139,6 +139,9 @@ while running:
 
     keys = pg.key.get_pressed()
 
+    old_player = player[:]
+    choice = action(qtab)
+
     screen.fill((252,252,252))
 
     screen.blit(cheese_img,(cheese[0]*L,cheese[1]*L))
@@ -153,9 +156,6 @@ while running:
     if player == cheese:
         snack = True
 
-    old_player = player
-    choice = action(qtab)
-
     R = reward(player,old_player,cheese,trapped,snack)
 
     qtab[int(old_player[0]), int(old_player[1]), choice] =  qtab[int(old_player[0]), int(old_player[1]), choice] + lrate*(R + (discount**steps)*(np.max(qtab[int(old_player[0]), int(old_player[1])] -  qtab[int(old_player[0]), int(old_player[1]), choice])))
@@ -168,7 +168,7 @@ while running:
 
     pg.display.flip()
     steps =+ 1
-    print(qtab)
+    print(player, qtab[player])
     print('______________________________________________________')
     if t != 3:
         time.sleep(vel[t])
