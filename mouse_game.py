@@ -4,7 +4,7 @@ import random
 import time
 pg.init()
 
-stage = pg.image.load("stage.png")
+stage = pg.image.load("stage_3.png")
 
 mouse_img = pg.image.load("mouse.png")
 cheese_img = pg.image.load("cheese.png")
@@ -35,7 +35,8 @@ lrate = 0.2
 steps = 0
 old_player = (0,0)
 
-t = 0.1
+t = 1
+vel = [1,0.5,0.1]
 
 
 
@@ -61,7 +62,7 @@ def reward(new_pos,old_pos,target,is_trapped,snack):
     new_dist = ((target[0] - new_pos[0])**2 + (target[1] - new_pos[1])**2)**0.5
 
     if is_trapped:
-        Reward = -1000000000000000
+        Reward = -100
     elif snack:
         Reward = 100
     elif new_dist < old_dist:
@@ -128,9 +129,11 @@ while running:
             if event.key == pg.K_ESCAPE:
                 running = False
             elif event.key == pg.K_PLUS:
-                t = t * 0.1
+                if t < 3:
+                    t = t + 1
             elif event.key == pg.K_MINUS:
-                t = t * 10
+                if t > 0:
+                    t = t - 1
 
 
 
@@ -167,5 +170,5 @@ while running:
     steps =+ 1
     print(qtab)
     print('______________________________________________________')
-
-    time.sleep(t)
+    if t != 3:
+        time.sleep(vel[t])
