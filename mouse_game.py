@@ -4,7 +4,7 @@ import random
 import time
 pg.init()
 
-stage = pg.image.load("stage_4.png")
+stage = pg.image.load("stage.png")
 
 mouse_img = pg.image.load("mouse.png")
 cheese_img = pg.image.load("cheese.png")
@@ -26,19 +26,19 @@ cats = []
 player = ()
 snack = False
 trapped = False
+border = False
 
 epsilon = 1.0
-epsilondecay = 0.0005
+epsilondecay = 0.00005
 discount = 0.9
 lrate = 0.2
 
-steps = 0
 old_player = (0,0)
 
 t = 1
 vel = [1,0.5,0.1]
 
-
+route = []
 
 qtab = np.zeros((stage_w,stage_h,4))
 actionlist = ['Up','Down','Left','Right']
@@ -57,26 +57,23 @@ for c in range (stage_w):
 
 ########### Functions #############
 
-def reward(new_pos,old_pos,target,is_trapped,snack):
-    old_dist = ((target[0] - old_pos[0])**2 + (target[1] - old_pos[1])**2)**0.5
-    new_dist = ((target[0] - new_pos[0])**2 + (target[1] - new_pos[1])**2)**0.5
-
+def reward(new_pos,old_pos,target,is_trapped,snack,route):
+    global qtab,lrate,discount
     if is_trapped:
-        Reward = (-100)
+        for i,m in enumerate(route):
+            R = -100 * (i+1/len(route))
+            qtab[int(m[0]), int(m[1]), m[2]] =  qtab[int(m[0]), int(m[1]), m[2]] + lrate*(R + (discount**i)*(np.max(qtab[int(m[0]), int(m[1])] -  qtab[int(m[0]), int(m[1]), m[2]])))
     elif snack:
-        Reward = 100
-    elif new_dist < old_dist:
-        Reward = 1
-    else:
-        Reward = -1
-
-    return Reward
+        for i,m in enumerate(route):
+            R = 100000 * (i+1/len(route))
+            qtab[int(m[0]), int(m[1]), m[2]] =  qtab[int(m[0]), int(m[1]), m[2]] + lrate*(R + (discount**i)*(np.max(qtab[int(m[0]), int(m[1])] -  qtab[int(m[0]), int(m[1]), m[2]])))
     
 def action(qtable):
     global epsilon
     global player
     chance = random.uniform(0,1)
     deciding = True
+    border = False
     if chance < epsilon:
         while deciding:
             choice = random.randrange(len(actionlist))
@@ -98,23 +95,35 @@ def action(qtable):
     else:
         
         choice = np.argmax(qtable[player[0], player[1]])
-        if actionlist[choice] == 'Up' and player[1] != 0:
-            player = (player[0],player[1] - 1)
+        if actionlist[choice] == 'Up':
+            if player[1] != 0:
+                player = (player[0],player[1] - 1)
+            else:
+                border = True
             
 
-        elif actionlist[choice] == 'Down' and player[1] != stage_h - 1:
-            player = (player[0],player[1] + 1)
+        elif actionlist[choice] == 'Down':
+            if player[1] != stage_h - 1:
+                player = (player[0],player[1] + 1)
+            else:
+                border = True
+            
+            
+        elif actionlist[choice] == 'Left':
+            if player[0] != 0:
+                player = (player[0] - 1,player[1])
+            else:
+                border = True
                 
 
-        elif actionlist[choice] == 'Left' and player[0] != 0:
-            player = (player[0] - 1,player[1])
-                
-
-        elif actionlist[choice] == 'Right' and player[0] != stage_w - 1:
-            player = (player[0] + 1,player[1])
+        elif actionlist[choice] == 'Right':
+            if player[0] != stage_w - 1:
+                player = (player[0] + 1,player[1])
+            else:
+                border = True
                 
     epsilon = epsilon - epsilondecay
-    return choice
+    return choice,border
 
 
 
@@ -129,7 +138,7 @@ while running:
             if event.key == pg.K_ESCAPE:
                 running = False
             elif event.key == pg.K_PLUS:
-                if t < 3:
+                if t < len(vel):
                     t = t + 1
             elif event.key == pg.K_MINUS:
                 if t > 0:
@@ -140,7 +149,8 @@ while running:
     keys = pg.key.get_pressed()
 
     old_player = player[:]
-    choice = action(qtab)
+    choice,border = action(qtab)
+    route.append([old_player[0],old_player[1],choice])
 
     screen.fill((252,252,252))
 
@@ -156,19 +166,20 @@ while running:
     if player == cheese:
         snack = True
 
-    R = reward(player,old_player,cheese,trapped,snack)
-
-    qtab[int(old_player[0]), int(old_player[1]), choice] =  qtab[int(old_player[0]), int(old_player[1]), choice] + lrate*(R + (discount**steps)*(np.max(qtab[int(old_player[0]), int(old_player[1])] -  qtab[int(old_player[0]), int(old_player[1]), choice])))
+    if border:
+        qtab[int(old_player[0]), int(old_player[1]), choice] = qtab[int(old_player[0]), int(old_player[1]), choice] + (-10*10**10)
 
     if trapped or snack:
+        R = reward(player,old_player,cheese,trapped,snack,route)
         player = player_start
         snack = False
         trapped = False
-        steps = 0
+        route = []
+        
 
     pg.display.flip()
-    steps =+ 1
     print(player, qtab[player])
     print('______________________________________________________')
-    if t != 3:
+    if t != len(vel):
         time.sleep(vel[t])
+#test
