@@ -2,13 +2,16 @@ import pygame as pg
 import numpy as np
 import random
 import time
+import os
 pg.init()
 
-stage = pg.image.load("stage_4.png")
+stage = pg.image.load("stage.png")
 
 mouse_img = pg.image.load("mouse.png")
 cheese_img = pg.image.load("cheese.png")
-cat_img = pg.image.load("cat.png")
+gulv_img = pg.image.load("gulv.png")
+
+
 
 stage_w,stage_h = stage.get_size()
 L = 40
@@ -16,8 +19,15 @@ stage = pg.transform.scale(stage,(stage_w*L,stage_h*L))
 
 mouse_img = pg.transform.scale(mouse_img,(L,L))
 cheese_img = pg.transform.scale(cheese_img,(L,L))
-cat_img = pg.transform.scale(cat_img,(L,L))
+gulv_img = pg.transform.scale(gulv_img,(L,L))
 
+cat_imgs = []
+
+
+for cat in os.listdir('cats'):
+    new_cat = pg.image.load(os.path.join('cats',cat))
+    new_cat = pg.transform.scale(new_cat,(L,L))
+    cat_imgs.append(new_cat)
 screen = pg.display.set_mode((stage_w * L,stage_h * L))
 screen.blit(stage,(0,0))
 
@@ -42,12 +52,13 @@ vel = [1,0.5,0.1]
 
 qtab = np.zeros((stage_w,stage_h,4))
 actionlist = ['Up','Down','Left','Right']
+direction = [180,0,270,90]
 
 for c in range (stage_w):
     for r in range (stage_h):
         tile = screen.get_at((c*L, r*L))[:3]
         if tile == (236,28,36):
-            cats.append((c,r))
+            cats.append((c,r,random.randint(0,len(cat_imgs)-1)))
         elif tile == (255,242,0):
             cheese = (c,r)
         elif tile == (185,122,86):
@@ -69,7 +80,6 @@ def reward(new_pos,old_pos,target,is_trapped,snack):
         Reward = 1
     else:
         Reward = -1
-
     return Reward
     
 def action(qtable):
@@ -134,6 +144,8 @@ while running:
             elif event.key == pg.K_MINUS:
                 if t > 0:
                     t = t - 1
+            elif event.key == pg.K_SPACE:
+                epsilon = 1.0
 
 
 
@@ -142,17 +154,21 @@ while running:
     old_player = player[:]
     choice = action(qtab)
 
-    screen.fill((252,252,252))
+    for c in range (stage_w):
+        for r in range (stage_h):
+            screen.blit(gulv_img,(c * L,r * L))
 
     screen.blit(cheese_img,(cheese[0]*L,cheese[1]*L))
 
     for cat in cats:
-        screen.blit(cat_img,(cat[0]*L,cat[1]*L))
+        screen.blit(cat_imgs[cat[2]],(cat[0]*L,cat[1]*L))
 
-    screen.blit(mouse_img,(player[0]*L,player[1]*L))
+    mouse = pg.transform.rotate(mouse_img,direction[choice])
+    screen.blit(mouse,(player[0]*L,player[1]*L))
 
-    if player in cats:
-        trapped = True
+    for cat in cats:
+        if player == (cat[0],cat[1]):
+            trapped = True
     if player == cheese:
         snack = True
 
